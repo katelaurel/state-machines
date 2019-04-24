@@ -22,9 +22,22 @@ import Random
 
 {--
 onclick: makes a random transition
-  the functions that govern the state machine's own logic and behavior control how that transition is
+  the functions that govern the state machine's own logic and behavior control how that transition is acted out.
+    All state machine functions advance by one step, whether that's to the next state or to a final state.
+    If things advance to the final state, that function needs to make it impossible to ask for another update, or (alternatively)
+      change the view so that it's clear we're at a final state and any further requests just say no. (see the json example for ways)
+
+
 update function:
-  start  
+  generaterandomchange (model unchanged, command random.generate)
+  changethestate (model gets changed based on value, command none)
+^ I *think* it's necessary to make two functions here because generators are themselves handled as a command. But this is tbd:
+  so long as nesting generators inside other functions can happen (and why wouldn't it? didn't I do that earlier tonight by
+  mistake?), then "changethestate" is the only "update" required, which gets its message from an onclick listener, sends a command
+  to generate a random transition and apply it, and updates the model. (Right now to me this sounds like the updated model will
+  require a second msg, but see also the possibility of using case statements inside the message thing in the http example?)
+
+STARTING POINT: make a NON-RANDOM state machine. two buttons, cycle back and forth. or multiple paths.
 
 --}
 
