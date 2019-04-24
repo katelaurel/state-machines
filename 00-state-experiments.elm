@@ -24,7 +24,7 @@ import Random
 onclick: makes a random transition
   the functions that govern the state machine's own logic and behavior control how that transition is
 update function:
-  start
+  start  
 
 --}
 
