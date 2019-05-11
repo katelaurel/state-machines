@@ -4,6 +4,7 @@ import Html exposing (..)
 import Html.Events exposing (..)
 import Array
 import Random
+import Tuple
 import Dict
 
 
@@ -48,15 +49,25 @@ type StateMachine
   | BothModAndComb Codepoints
   | Done Codepoints
 
-possibleTransitions : Dict String String
+possibleTransitions : Dict String (List String)
 possibleTransitions = 
   Dict.fromList
-  [ ("Start" ["Unmodifiable", "ModifiableOnly", "CombinableOnly", "BothModAndComb"])
-  , ("Unmodifiable" "Done")
-  , ("ModifiableOnly" "Unmodifiable")
-  , ("CombinableOnly" "Unmodifiable")
-  , ("BothModAndComb" ["BothModAndComb", "ModifiableOnly", "CombinableOnly", "Unmodifiable"])
+  [ ("Start", ["Unmodifiable", "ModifiableOnly", "CombinableOnly", "BothModAndComb"])
+  , ("Unmodifiable", ["Done"])
+  , ("ModifiableOnly", ["Unmodifiable"])
+  , ("CombinableOnly", ["Unmodifiable"])
+  , ("BothModAndComb", ["BothModAndComb", "ModifiableOnly", "CombinableOnly", "Unmodifiable"])
   ]
+
+possibleCodepointGroups : Dict String (List Array)
+possibleCodepointGroups =
+  Dict.fromList
+  [ ("Start", [regularCombiners, onlyModifiable, bothModifiableCombinable, unmodifiables])
+  , ("ModifiableOnly", [skintoneModifiers, hairModifiers])
+  , ("CombinableOnly", [genderCombiners, regularCombiners])
+  , ("BothModAndComb", [skintoneModifiers, hairModifiers, genderCombiners, regularCombiners])
+  ]
+  -- excluding Unmodifiable from dict because handled as special case
 
 type alias Codepoints =
   (List Char)
@@ -103,28 +114,83 @@ update msg model =
   case msg of
     StartUp ->
       ( model
-      , Random.generate 
+      , 
       )
-    ChangeState ->
+    GetNewCodeAndState ->
+      ( model
+      , 
+      )
+    ApplyStateChange ->
       ( model
       , Cmd.none
       )
 
 
--- in each case: generate an int and select from the list of available transitions, then generate an int and select from the possible codepoints in that set
 
-generateNextState : Model -> Random.Generator Int
-generateNextState model = 
-  Random.int 0 (Array.length model.possibleTransitions) -- don't know yet how to model that. hash table, store it separately from the "states" of the state machine?
+{--
+- pick a next state from the possible transitions
+- pick a codepoint from the possible codepoints in that state
+- set the model to the newstate, and append the codepoint to the codepoint list in the model's state-type
 
-generateRandomCodepoint : 
-generateRandomCodepoint newstate =
-  Random.int 0 (Array.length newstate)
+generate random place (int) in an array of codepoints in the possiblecodepointgroups valid for the transition.
+
+pick random valid transition
+pick random valid code point group
+pick random valid codepoint
+
+model (new state new codepoint) name of new state
+
+Random.step (Random.int 0 (Array.length (Array.fromList (Dict.get model.statestring possibleTransitions)))) theseed
+^ this gives ([int in the possibletransitions length] newseed)
+transition = Tuple.first ^ all that
+
+Random.step (Random.int 0 (Array.length (Array.fromList (Dict.get transition possibleCodePointGroups)))) newseed
+^ this gives ([int in the possible codepoint group length] newseed)
+codepointgroup = Tuple.first ^ that
+
+Random.generate ApplyStateChange (Random.int 0 (Array.length codepointgroup))
+^ produces a cmd msg, but doesn't retain info about which codepointgroup you're pulling from, or what state transition is happening.
+  it looks like it MIGHT be possible to produce a... Cmd (String -> Msg) ? but not clear how to make that actually transform a string.
+
+--}
+
+
+pickNextState : Model -> Int
+pickNextState model = 
+  newState = Tuple.first (Random.step (Random.int 0 (Array.length (Array.fromList (Dict.get model.statestring possibleTransitions)))) theseed)
+
+
+pickCodepointGroup newState = 
+  cpg = Tuple.first (Random.step (Random.int 0 (Array.length (Array.fromList (Dict.get newState possibleCodepointGroups)))) theseed)
+
+
+pickCodepoint cpg =
+  newpoint = Array.get (Tuple.first (Random.step (Random.int 0 (Array.length cpg)) theseed)) cpg
+
+-- ^^^ the seeding is all fucked up, but chaining these properly (pickcodepoint [pickcodepointgroup [picknextstate model]]) would generate a codepoint
+-- .....except: Dict.get gives you a maybe, so either need to use Maybe.withDefault (and have the default be, e.g., a zero-length array or something) or ?? something else.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--generateNextState : Cmd Msg
+--generateNextState =
+--  Random.generate pickNextState 
+
+--generateStateCodepoint : Array -> 
+--generateStateCodepoint newstate =
+--  Random.step (Random.int 0 (Array.length newstate)) theseed
   -- generate a random item that's a member of a list
-
-
--- maybe possible next states are a dictionary with a key, OR an array from which one can pick a random item.
-
 
 
 -- SUBSCRIPTIONS
